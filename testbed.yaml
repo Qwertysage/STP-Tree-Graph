@@ -1,0 +1,50 @@
+---
+
+devices:
+  SW1:
+    type: switch
+    os: ios
+    credentials:
+      default:
+        username: cisco
+        password: cisco
+    connections:
+      mgmt:
+        protocol: ssh
+        ip: 192.168.0.209
+
+  SW3:
+    type: switch
+    os: ios
+    credentials:
+      default:
+        username: cisco
+        password: cisco
+    connections:
+      mgmt:
+        protocol: ssh
+        ip: 192.168.0.211
+
+  SW2:
+    type: switch
+    os: ios
+    credentials:
+      default:
+        username: cisco
+        password: cisco
+    connections:
+      mgmt:
+        protocol: ssh
+        ip: 192.168.0.210
+
+  SW4:
+    type: switch
+    os: ios
+    credentials:
+      default:
+        username: cisco
+        password: cisco
+    connections:
+      mgmt:
+        protocol: ssh
+        ip: 192.168.0.212
