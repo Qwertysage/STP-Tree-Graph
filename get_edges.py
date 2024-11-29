@@ -1,5 +1,4 @@
 from genie.conf import Genie
-from genie.utils import Dq
 
 # Load the testbed YAML file
 testbed = Genie.init("testbed.yaml")
@@ -18,20 +17,21 @@ for device_name, device in devices.items():
     
     # Parse STP information
     stp_output = device.parse("show spanning-tree")
+    vlan_data = stp_output.get('pvst', {}).get('vlans', {}).get(1, {})
     
-    # Check only for VLAN 1
-    vlan_data = stp_output.get('mstp', {}).get('vlans', {}).get('1', {})
     if vlan_data:
-        for interface, interface_data in vlan_data.get('interfaces', {}).items():
+        interfaces = vlan_data.get('interfaces', {})
+        for interface, interface_data in interfaces.items():
             # Check port state
             port_state = interface_data.get('port_state')
-            if port_state and port_state.lower() == "forwarding":
-                # Extract the designated bridge (neighbor switch)
-                designated_bridge = interface_data.get('designated_bridge')
-                if designated_bridge:
-                    neighbor_switch = designated_bridge.split()[0]  # Extract the switch name
-                    edge = (device_name, neighbor_switch)
-                    edges.append(edge)
+            designated_bridge = interface_data.get('designated_bridge')  # Neighbor's bridge MAC
+            role = interface_data.get('role')  # Optional: Role for debugging
+            print(f"Interface {interface} on {device_name}: state={port_state}, role={role}, neighbor={designated_bridge}")
+
+            if port_state and port_state.lower() == "forwarding" and designated_bridge:
+                # Use the device name and designated bridge as the edge
+                edge = (device_name, designated_bridge)
+                edges.append(edge)
 
 # Remove duplicate edges
 edges = list({tuple(sorted(edge)) for edge in edges})
