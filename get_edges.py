@@ -9,7 +9,9 @@ for device_name, device in devices.items():
     device.connect()
 
 # Store edges
-edges = []
+info = {}
+info['root'] = {}
+info['stp'] = {}
 
 # Iterate over devices to parse STP output
 for device_name, device in devices.items():
@@ -17,29 +19,42 @@ for device_name, device in devices.items():
     
     # Parse STP information
     stp_output = device.parse("show spanning-tree")
+    cdp_output = device.parse("show cdp neighbor")
     vlan_data = stp_output.get('pvst', {}).get('vlans', {}).get(1, {})
+    if vlan_data['root']['address']==vlan_data['bridge']['address']:
+        info['root'] = device_name
     
     if vlan_data:
         interfaces = vlan_data.get('interfaces', {})
         for interface, interface_data in interfaces.items():
             # Check port state
             port_state = interface_data.get('port_state')
-            designated_bridge = interface_data.get('designated_bridge')  # Neighbor's bridge MAC
-            role = interface_data.get('role')  # Optional: Role for debugging
-            print(f"Interface {interface} on {device_name}: state={port_state}, role={role}, neighbor={designated_bridge}")
+            if port_state == 'blocking':
+                continue
+            role = interface_data.get('role')
 
-            if port_state and port_state.lower() == "forwarding" and designated_bridge:
-                # Use the device name and designated bridge as the edge
-                edge = (device_name, designated_bridge)
-                edges.append(edge)
+            neighbor = "client unknown"
+            for i, j in cdp_output['cdp']["index"].items():
+                if interface != j["local_interface"]:
+                    continue
+                
+                neighbor = {"device" : j["device_id"].split('.')[0],
+                 "port" : "GigabitEthernet" + j["port_id"]}
 
-# Remove duplicate edges
-edges = list({tuple(sorted(edge)) for edge in edges})
+            if neighbor == "client unknown":
+                continue
 
-# Print the list of edges
-print("List of edges for VLAN 1 (excluding blocking links):")
-print(edges)
+            device_stp = {
+                interface :
+                {"state" : port_state, "role" : role, "neighbor" : neighbor}
+                }
 
+            try:
+                info['stp'][device_name].append(device_stp)
+            except Exception as KeyError:
+                info['stp'][device_name] = [device_stp]
+
+print(info)
 # Disconnect from all devices
 for device_name, device in devices.items():
     device.disconnect()
